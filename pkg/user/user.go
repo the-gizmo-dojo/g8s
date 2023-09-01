@@ -1,17 +1,33 @@
 package user
 
+const (
+	KeyType = "x25519"
+)
+
+type Name string
+
+type Email string
+
+type Passphrase string
+
 type User struct {
-	Name       string
-	Email      string
-	Passphrase []byte // TODO make interface so can be retrieved from prompt or passed in programatically
+	Name       Name
+	Email      Email
+	Passphrase Passphrase
 	KeyType    string
 }
 
-func GetNewUser(name, email string, pass []byte) User {
+func NewUser(n Name, e Email, p Passphrase) User {
 	return User{
-		Name:       name,
-		Email:      email,
-		Passphrase: pass,
-		KeyType:    "x25519",
+		Name:       n,
+		Email:      e,
+		Passphrase: p,
+		KeyType:    KeyType,
 	}
 }
+
+// func GetName() Name
+
+// func GetEmail() Email
+
+// func GetPassphrase() Passphrase

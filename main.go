@@ -17,6 +17,8 @@ const (
 
 func main() {
 	// configure then create password
+	// TODO turn into pkg
+	// method(num) []Password
 	pwsettings := password.Settings{
 		CharacterSet: `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~!@#$%^&*()<>?{}[]-_=+\/|`,
 		Length:       64,
