@@ -20,14 +20,14 @@ type Question struct {
 type Subject string
 
 const (
-	Password Subject = "Password"
-	SSHKey   Subject = "SSHKey"
-	TLSKey   Subject = "TLSKey"
-	GPGKey   Subject = "GPGKey"
+	Password   Subject = "Password"
+	PGPKeyPair Subject = "PGPKeyPair"
+	SSHKeyPair Subject = "SSHKeyPair"
+	TLSKeyPair Subject = "TLSKeyPair"
 )
 
 func validSubject(s Subject) bool {
-	sVals := []Subject{Password, SSHKey, TLSKey, GPGKey}
+	sVals := []Subject{Password, SSHKeyPair, TLSKeyPair, PGPKeyPair}
 
 	for _, v := range sVals {
 		if v == s {
@@ -42,15 +42,22 @@ func (s Subject) String() string {
 	return string(s)
 }
 
+/*
+Audience is either Human or Daimon.
+
+	Human: means input from a human is needed to get the Answer.
+	Daimon: means input is not needed, can be generated from information the system already knows
+			(including information about Humans).
+*/
 type Audience string
 
 const (
-	Human   Audience = "Human"   // bufio.NewReader(os.Stdin), some REST form
-	Machine Audience = "Machine" // automatically generated
+	Human  Audience = "Human"  // bufio.NewReader(os.Stdin), some REST form
+	Daimon Audience = "Daimon" // automatically generated
 )
 
 func validAudience(a Audience) bool {
-	aVals := []Audience{Human, Machine}
+	aVals := []Audience{Human, Daimon}
 
 	for _, v := range aVals {
 		if v == a {
