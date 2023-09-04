@@ -28,10 +28,6 @@ type Answerer interface {
 	Respond() (Answer, error)
 }
 
-type MachineAnswerer interface {
-	Answerer
-}
-
 type MachinePassword struct {
 	password.Settings
 }
@@ -57,15 +53,6 @@ func (mp MachinePassword) Respond() (a Answer, err error) {
 	return a, err
 }
 
-type HumanAnswerer interface {
-	Answerer
-	Prompter
-}
-
-type Prompter interface {
-	Prompt() string
-}
-
 type HumanPassword struct {
 }
 
@@ -75,7 +62,19 @@ func (hp HumanPassword) Respond() (a Answer, err error) {
 	return a, err
 }
 
-func (hp HumanPassword) Prompt() string {
+// TODO to human pkg?
+type Input string
+
+const (
+	CLI Input = "CLI"
+	GUI Input = "GUI"
+)
+
+type Prompter interface {
+	Prompt() string
+}
+
+func (in Input) Prompt() string {
 	// TODO which kind of prompt, cli vs rest form?
 	return "prompt"
 }
