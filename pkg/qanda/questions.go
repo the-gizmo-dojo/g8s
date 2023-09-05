@@ -6,6 +6,10 @@ how do i want to consume this pkg?
 q := qanda.NewQuestion(qanda.Password, qanda.Human)
 var answer = $question.Ask
 */
+
+// TODO needs to with with context so that information can be passed through
+// to various Human and Daimon handlers
+
 package qanda
 
 import (

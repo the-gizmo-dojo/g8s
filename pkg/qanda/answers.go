@@ -1,12 +1,4 @@
-// a package to get the answers to whatever question was asked
 package qanda
-
-/*
-how do i want to consume this package?
-
-q := qanda.New(qanda.Password, qanda.Human)
-var answer = $question.Ask
-*/
 
 import (
 	"crypto"
@@ -35,6 +27,10 @@ type Answerer interface {
 }
 
 type PasswordAnswer string
+
+func (p PasswordAnswer) String() string {
+	return string(p)
+}
 
 type DaimonPassword struct {
 	agent.Daimon
@@ -91,8 +87,8 @@ func (m DaimonSSHKeyPair) Respond() (a Answer, err error) {
 }
 
 type PGPKeyPairAnswer struct {
-	PGPKey gopgpcrypto.Key
-	PasswordAnswer
+	PGPKey   gopgpcrypto.Key
+	Password string
 }
 
 type DaimonPGPKeyPair struct {
@@ -101,17 +97,17 @@ type DaimonPGPKeyPair struct {
 }
 
 const (
-	PGPKeyType = "x25519"
+	pgpKeyType = "x25519"
 )
 
 func (m DaimonPGPKeyPair) Respond() (a Answer, err error) {
-	user := agent.NewHuman("riley", "riley@gmail.com", []byte("hello world")) // TODO replace
+	user := agent.NewHuman("riley", "123 fake st", "riley@gmail.com") // TODO replace
 
 	q, _ := NewQuestion(Password, Daimon)
 	pw, _ := q.Ask()
-	pwans := pw.Content.(PasswordAnswer)
-	pgppw := []byte(string(pwans))
-	pgpstr, err := gopgphelper.GenerateKey(user.Name, user.Email, pgppw, PGPKeyType, 0)
+	pwstr := pw.Content.(PasswordAnswer).String()
+	pgppw := []byte(pwstr)
+	pgpstr, err := gopgphelper.GenerateKey(user.Name, user.Email, pgppw, pgpKeyType, 0)
 
 	if err != nil {
 		err = fmt.Errorf("Error during PGP key creation.")
@@ -124,8 +120,8 @@ func (m DaimonPGPKeyPair) Respond() (a Answer, err error) {
 	}
 
 	keypair := PGPKeyPairAnswer{
-		PGPKey:         *pgpkey,
-		PasswordAnswer: pwans,
+		PGPKey:   *pgpkey,
+		Password: pwstr,
 	}
 	a.Content = keypair
 	return a, err

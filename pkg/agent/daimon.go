@@ -2,15 +2,18 @@
 package agent
 
 type Daimon struct {
-	Name         string
+	Agent
 	Representing Human
 }
 
-func NewDaimon(n string, h Human) Daimon {
+func NewDaimon(n, a string, h Human) Daimon {
 	// must prompt?
 
 	return Daimon{
-		Name:         n,
+		Agent: Agent{
+			Name:    n,
+			Address: a,
+		},
 		Representing: h,
 	}
 }

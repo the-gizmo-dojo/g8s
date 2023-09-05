@@ -2,18 +2,35 @@
 package agent
 
 type Human struct {
-	Name       string
-	Email      string
-	Passphrase []byte
+	Agent
+	Email string
 }
 
-func NewHuman(n, e string, p []byte) Human {
+func NewHuman(n, a, e string) Human {
 	// must prompt?
 	return Human{
-		Name:       n,
-		Email:      e,
-		Passphrase: p,
+		Agent: Agent{
+			Name:    n,
+			Address: a,
+		},
+		Email: e,
 	}
+}
+
+type Input string
+
+const (
+	CLI Input = "CLI"
+	GUI Input = "GUI"
+)
+
+type Prompter interface {
+	Prompt() string
+}
+
+func (in Input) Prompt() string {
+	// TODO which kind of prompt, cli vs rest form?
+	return "prompt"
 }
 
 // func GetName() Name
