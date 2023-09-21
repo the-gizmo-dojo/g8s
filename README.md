@@ -1,2 +1,2 @@
-# core-secrets
-Generates initial secrets core to the basic functioning of a new user.
+# g8
+`g8` is a generator which answers questions that normally gate application deployments.
