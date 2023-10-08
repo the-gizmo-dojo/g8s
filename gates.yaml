@@ -1,6 +1,3 @@
-hello:
-  - id: what
-
 passwords:
   - id: MyPass
     length: 64
