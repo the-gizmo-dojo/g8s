@@ -30,12 +30,12 @@ func (cf ConfigFile) Parse() (Config, error) {
 	yml := make(map[string]interface{})
 	contents, err := os.ReadFile(string(cf))
 	if err != nil {
-		err = fmt.Errorf("Error reading gates.yaml file")
+		err = fmt.Errorf("Error reading %s file", cf)
 	}
 
 	err = yaml.Unmarshal(contents, yml)
 	if err != nil {
-		err = fmt.Errorf("Error unmarshaling gates.yaml file")
+		err = fmt.Errorf("Error unmarshaling %s file", cf)
 	}
 
 	var config Config
@@ -70,7 +70,7 @@ func (cf ConfigFile) Parse() (Config, error) {
 				tlscerts.TLSCerts = append(tlscerts.TLSCerts, tlscert)
 			}
 		default:
-			err = fmt.Errorf("Unknown field in %s file!", DefaultFile)
+			err = fmt.Errorf("Unknown field in %s file!", cf)
 			fmt.Println(err)
 			os.Exit(1)
 		}
