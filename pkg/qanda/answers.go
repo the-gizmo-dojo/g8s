@@ -8,7 +8,7 @@ import (
 	gopgphelper "github.com/ProtonMail/gopenpgp/v2/helper"
 	"github.com/charmbracelet/keygen"
 	"github.com/crossplane/crossplane-runtime/pkg/password"
-	"github.com/the-gizmo-dojo/core-secrets/pkg/agent"
+	"github.com/the-gizmo-dojo/g8/pkg/agent"
 )
 
 var answererMap = map[string]Answerer{
