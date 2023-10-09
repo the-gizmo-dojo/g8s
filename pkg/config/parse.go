@@ -26,7 +26,7 @@ type Config struct {
 	gatesv1.TLSCerts
 }
 
-func (cf ConfigFile) Parse() (Config, error) {
+func Parse(cf ConfigFile) (Config, error) {
 	yml := make(map[string]interface{})
 	contents, err := os.ReadFile(string(cf))
 	if err != nil {

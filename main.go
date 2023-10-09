@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	content, _ := config.DefaultFile.Parse()
+	content, _ := config.Parse(config.DefaultFile)
 	payload, _ := json.Marshal(content)
 	fmt.Println(string(payload))
 
