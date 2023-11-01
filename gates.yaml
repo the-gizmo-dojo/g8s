@@ -6,11 +6,11 @@ pgpKeys:
   - id: MyPGPKey
     name: Riley
     address: "123 Fake St."
-    email: "g8@gmail.com"
+    email: "g8s@gmail.com"
 
 sshKeys:
   - id: MySSHKey
 
 tlsCerts:
   - id: MyTLSCert
-    hostname: "g8.com"
+    hostname: "g8s.com"
