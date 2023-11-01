@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	gatesv1 "github.com/the-gizmo-dojo/g8/pkg/apis/gates/v1"
@@ -23,14 +24,37 @@ type Config struct {
 
 func Parse(cf ConfigFile) (Config, error) {
 	var config Config
-	contents, err := os.ReadFile(string(cf))
+	name := string(cf)
+
+	info, err := os.Stat(name)
+	if err == nil && info.IsDir() {
+		err = fmt.Errorf("Error: filename is a directory, not a gates.yaml")
+		fmt.Println(err)
+		os.Exit(1)
+	} else if err != nil {
+		err = fmt.Errorf("Error: cannot find file")
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	file, err := os.Open(name)
+	if err != nil {
+		return config, err
+	}
+
+	defer file.Close()
+	contents, err := io.ReadAll(file)
 	if err != nil {
 		err = fmt.Errorf("Error reading %s file", cf)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	err = yaml.Unmarshal(contents, &config)
 	if err != nil {
 		err = fmt.Errorf("Error unmarshaling %s file", cf)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	return config, err
