@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/the-gizmo-dojo/g8/pkg/config"
+	"github.com/the-gizmo-dojo/g8s/pkg/config"
 	// "reflect"
 	// "github.com/the-gizmo-dojo/g8/pkg/qanda"
 )

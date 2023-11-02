@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	gatesv1 "github.com/the-gizmo-dojo/g8/pkg/apis/gates/v1"
+	gatesv1 "github.com/the-gizmo-dojo/g8s/pkg/apis/gates/v1"
 	yaml "gopkg.in/yaml.v3"
 )
 

@@ -1,4 +1,4 @@
-module github.com/the-gizmo-dojo/g8
+module github.com/the-gizmo-dojo/g8s
 
 go 1.20
 
