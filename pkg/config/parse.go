@@ -5,21 +5,20 @@ import (
 	"io"
 	"os"
 
-	gatesv1 "github.com/the-gizmo-dojo/g8s/pkg/apis/gates/v1"
 	yaml "gopkg.in/yaml.v3"
 )
 
 type ConfigFile string
 
 const (
-	DefaultFile ConfigFile = "gates.yaml"
+	DefaultFile ConfigFile = "g8s.yaml"
 )
 
 type Config struct {
-	Passwords []gatesv1.Password `json:"passwords,omitempty" yaml:"passwords,omitempty"`
-	PGPKeys   []gatesv1.PGPKey   `json:"pgpKeys,omitempty"   yaml:"pgpKeys,omitempty"`
-	SSHKeys   []gatesv1.SSHKey   `json:"sshKeys,omitempty"   yaml:"sshKeys,omitempty"`
-	TLSCerts  []gatesv1.TLSCert  `json:"tlsCerts,omitempty"  yaml:"tlsCerts,omitempty"`
+	Passwords []Password `json:"passwords,omitempty" yaml:"passwords,omitempty"`
+	PGPKeys   []PGPKey   `json:"pgpKeys,omitempty"   yaml:"pgpKeys,omitempty"`
+	SSHKeys   []SSHKey   `json:"sshKeys,omitempty"   yaml:"sshKeys,omitempty"`
+	TLSCerts  []TLSCert  `json:"tlsCerts,omitempty"  yaml:"tlsCerts,omitempty"`
 }
 
 func Parse(cf ConfigFile) (Config, error) {
@@ -28,7 +27,7 @@ func Parse(cf ConfigFile) (Config, error) {
 
 	info, err := os.Stat(name)
 	if err == nil && info.IsDir() {
-		err = fmt.Errorf("Error: filename is a directory, not a gates.yaml")
+		err = fmt.Errorf("Error: filename is a directory, not a g8s.yaml")
 		fmt.Println(err)
 		os.Exit(1)
 	} else if err != nil {

@@ -1,0 +1,12 @@
+apiVersion: api.g8s.io/v1alpha1
+kind: Namespace
+metadata:
+  labels:
+    app.kubernetes.io/name: namespace
+    app.kubernetes.io/instance: namespace-sample
+    app.kubernetes.io/part-of: kb
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kb
+  name: namespace-sample
+spec:
+  # TODO(user): Add fields here
