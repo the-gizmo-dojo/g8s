@@ -15,7 +15,6 @@ var answererMap = map[string]Answerer{
 	"DaimonPassword":   DaimonPassword{},
 	"DaimonPGPKeyPair": DaimonPGPKeyPair{},
 	"DaimonSSHKeyPair": DaimonSSHKeyPair{},
-	"HumanPassword":    HumanPassword{},
 }
 
 type Answer struct {
@@ -101,13 +100,13 @@ const (
 )
 
 func (m DaimonPGPKeyPair) Respond() (a Answer, err error) {
-	user := agent.NewHuman("riley", "123 fake st", "riley@gmail.com") // TODO replace
+	entityname, email := "riley", "riley@gmail.com" // TODO replace
 
 	q, _ := NewQuestion(Password, Daimon)
 	pw, _ := q.Ask()
 	pwstr := pw.Content.(PasswordAnswer).String()
 	pgppw := []byte(pwstr)
-	pgpstr, err := gopgphelper.GenerateKey(user.Name, user.Email, pgppw, pgpKeyType, 0)
+	pgpstr, err := gopgphelper.GenerateKey(entityname, email, pgppw, pgpKeyType, 0)
 
 	if err != nil {
 		err = fmt.Errorf("Error during PGP key creation.")
@@ -125,30 +124,4 @@ func (m DaimonPGPKeyPair) Respond() (a Answer, err error) {
 	}
 	a.Content = keypair
 	return a, err
-}
-
-type HumanPassword struct {
-}
-
-func (hp HumanPassword) Respond() (a Answer, err error) {
-	// TODO filler, need to call prompt
-	a.Content = PasswordAnswer("yay")
-	return a, err
-}
-
-// TODO to human pkg?
-type Input string
-
-const (
-	CLI Input = "CLI"
-	GUI Input = "GUI"
-)
-
-type Prompter interface {
-	Prompt() string
-}
-
-func (in Input) Prompt() string {
-	// TODO which kind of prompt, cli vs rest form?
-	return "prompt"
 }
