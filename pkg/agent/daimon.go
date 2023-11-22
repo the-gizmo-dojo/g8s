@@ -3,10 +3,9 @@ package agent
 
 type Daimon struct {
 	Agent
-	Representing Human
 }
 
-func NewDaimon(n, a string, h Human) Daimon {
+func NewDaimon(n, a string) Daimon {
 	// must prompt?
 
 	return Daimon{
@@ -14,6 +13,5 @@ func NewDaimon(n, a string, h Human) Daimon {
 			Name:    n,
 			Address: a,
 		},
-		Representing: h,
 	}
 }
