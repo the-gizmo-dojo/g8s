@@ -8,7 +8,6 @@ import (
 	gopgphelper "github.com/ProtonMail/gopenpgp/v2/helper"
 	"github.com/charmbracelet/keygen"
 	"github.com/crossplane/crossplane-runtime/pkg/password"
-	"github.com/the-gizmo-dojo/g8s/pkg/agent"
 )
 
 var answererMap = map[string]Answerer{
@@ -32,7 +31,6 @@ func (p PasswordAnswer) String() string {
 }
 
 type DaimonPassword struct {
-	agent.Daimon
 	PasswordAnswer
 	password.Settings
 }
@@ -64,7 +62,6 @@ type SSHKeyPairAnswer struct {
 }
 
 type DaimonSSHKeyPair struct {
-	agent.Daimon
 	SSHKeyPairAnswer
 	Opts []keygen.Option
 }
@@ -91,7 +88,6 @@ type PGPKeyPairAnswer struct {
 }
 
 type DaimonPGPKeyPair struct {
-	agent.Daimon
 	PGPKeyPairAnswer
 }
 

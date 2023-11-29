@@ -1,13 +1,23 @@
 package v1alpha1
 
+import (
+	"github.com/the-gizmo-dojo/g8s/pkg/qanda"
+)
+
 type Name string
 
-type Generator[G any] struct {
-	GeneratorFunc G
-	Options
+type Generator[A qanda.Answerer] struct {
+	qanda.Answerer
+	Validator
 }
 
-type Options interface {
+func Generate(g Generator[qanda.Answerer]) error {
+	_, ok := g.Respond()
+
+	return ok
+}
+
+type Validator interface {
 	Validate() error
 }
 

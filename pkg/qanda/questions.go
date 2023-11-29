@@ -47,21 +47,18 @@ func (s Subject) String() string {
 }
 
 /*
-Audience is either Human or Daimon.
+Audience is either Daimon, potentially could have Human option one day (some kind of prompt / input).
 
-	Human: means input from a human is needed to get the Answer.
-	Daimon: means input is not needed, can be generated from information the system already knows
-			(including information about Humans).
+	Daimon: means input is not needed, can be generated from information the system already knows.
 */
 type Audience string
 
 const (
-	Human  Audience = "Human"  // bufio.NewReader(os.Stdin), some REST form
 	Daimon Audience = "Daimon" // automatically generated
 )
 
 func validAudience(a Audience) bool {
-	aVals := []Audience{Human, Daimon}
+	aVals := []Audience{Daimon}
 
 	for _, v := range aVals {
 		if v == a {
