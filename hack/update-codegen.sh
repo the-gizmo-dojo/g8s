@@ -14,11 +14,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+go get k8s.io/code-generator/cmd/conversion-gen
+go mod download k8s.io/kube-openapi
+go mod download github.com/go-openapi/jsonreference
+go mod download github.com/go-openapi/swag
+go mod download github.com/google/gnostic-models
+go mod download github.com/go-openapi/jsonpointer
+go mod download github.com/mailru/easyjson
+go mod download github.com/josharian/intern
+
 set -o errexit
 set -o nounset
 set -o pipefail
 
 SCRIPT_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
+echo $SCRIPT_ROOT
+echo ${BASH_SOURCE[0]}
+echo $(dirname "${BASH_SOURCE[0]}")/../../..
 
 source "${SCRIPT_ROOT}/hack/kube_codegen.sh"
 
@@ -28,13 +40,13 @@ source "${SCRIPT_ROOT}/hack/kube_codegen.sh"
 #                  instead of the $GOPATH directly. For normal projects this can be dropped.
 
 kube::codegen::gen_helpers \
-    --input-pkg-root the-gizmo-dojo/g8s/pkg/apis \
-    --output-base "$(dirname "${BASH_SOURCE[0]}")/../../.." \
+    --input-pkg-root github.com/the-gizmo-dojo/g8s/pkg/apis \
+    --output-base "$(dirname "${BASH_SOURCE[0]}")/../../../.." \
     --boilerplate "${SCRIPT_ROOT}/hack/boilerplate.go.txt"
 
 kube::codegen::gen_client \
     --with-watch \
-    --input-pkg-root the-gizmo-dojo/g8s/pkg/apis \
-    --output-pkg-root the-gizmo-dojo/g8s/pkg/generated \
-    --output-base "$(dirname "${BASH_SOURCE[0]}")/../../.." \
+    --input-pkg-root github.com/the-gizmo-dojo/g8s/pkg/apis \
+    --output-pkg-root github.com/the-gizmo-dojo/g8s/pkg/generated \
+    --output-base "$(dirname "${BASH_SOURCE[0]}")/../../../.." \
     --boilerplate "${SCRIPT_ROOT}/hack/boilerplate.go.txt"
