@@ -20,11 +20,11 @@ package externalversions
 import (
 	reflect "reflect"
 	sync "sync"
-	versioned "the-gizmo-dojo/g8s/pkg/generated/clientset/versioned"
-	apig8sio "the-gizmo-dojo/g8s/pkg/generated/informers/externalversions/api.g8s.io"
-	internalinterfaces "the-gizmo-dojo/g8s/pkg/generated/informers/externalversions/internalinterfaces"
 	time "time"
 
+	versioned "github.com/the-gizmo-dojo/g8s/pkg/generated/clientset/versioned"
+	apig8sio "github.com/the-gizmo-dojo/g8s/pkg/generated/informers/externalversions/api.g8s.io"
+	internalinterfaces "github.com/the-gizmo-dojo/g8s/pkg/generated/informers/externalversions/internalinterfaces"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

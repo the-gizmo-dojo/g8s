@@ -19,12 +19,12 @@ package v1alpha1
 
 import (
 	"context"
-	versioned "the-gizmo-dojo/g8s/pkg/generated/clientset/versioned"
-	internalinterfaces "the-gizmo-dojo/g8s/pkg/generated/informers/externalversions/internalinterfaces"
-	v1alpha1 "the-gizmo-dojo/g8s/pkg/generated/listers/api.g8s.io/v1alpha1"
 	time "time"
 
 	apig8siov1alpha1 "github.com/the-gizmo-dojo/g8s/pkg/apis/api.g8s.io/v1alpha1"
+	versioned "github.com/the-gizmo-dojo/g8s/pkg/generated/clientset/versioned"
+	internalinterfaces "github.com/the-gizmo-dojo/g8s/pkg/generated/informers/externalversions/internalinterfaces"
+	v1alpha1 "github.com/the-gizmo-dojo/g8s/pkg/generated/listers/api.g8s.io/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"

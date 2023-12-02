@@ -18,8 +18,8 @@ limitations under the License.
 package api
 
 import (
-	v1alpha1 "the-gizmo-dojo/g8s/pkg/generated/informers/externalversions/api.g8s.io/v1alpha1"
-	internalinterfaces "the-gizmo-dojo/g8s/pkg/generated/informers/externalversions/internalinterfaces"
+	v1alpha1 "github.com/the-gizmo-dojo/g8s/pkg/generated/informers/externalversions/api.g8s.io/v1alpha1"
+	internalinterfaces "github.com/the-gizmo-dojo/g8s/pkg/generated/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to each of this group's versions.
