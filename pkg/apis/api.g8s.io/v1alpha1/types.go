@@ -20,6 +20,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// +genclient
+// +k8s:register-gen
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// Password is the Schema for the passwords API
+type Password struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   PasswordSpec   `json:"spec,omitempty"`
+	Status PasswordStatus `json:"status,omitempty"`
+}
+
 // PasswordSpec defines the desired state of Password
 type PasswordSpec struct {
 	Name         string `json:"id,omitempty"`
@@ -30,17 +42,6 @@ type PasswordSpec struct {
 // PasswordStatus defines the observed state of Password
 type PasswordStatus struct {
 	Ready bool `json:"ready"`
-}
-
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// Password is the Schema for the passwords API
-type Password struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   PasswordSpec   `json:"spec,omitempty"`
-	Status PasswordStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

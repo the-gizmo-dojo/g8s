@@ -221,6 +221,8 @@ function kube::codegen::gen_helpers() {
             "${extra_peer_args[@]:+"${extra_peer_args[@]}"}" \
             "${input_args[@]}"
     fi
+
+
 }
 
 # Generate openapi code
@@ -548,6 +550,10 @@ function kube::codegen::gen_client() {
             dir2="$(dirname "${dir}")"
             leaf2="$(basename "${dir2}")"
             group_versions+=("${leaf2}/${leaf}")
+            echo "input_pkgs: $pkg"
+            echo "dir2: $dir2"
+            echo "leaf2: $leaf2"
+            echo "group_versions: $group_versions"
         fi
     done < <(
         ( kube::codegen::internal::git_grep -l \
@@ -597,16 +603,17 @@ function kube::codegen::gen_client() {
     for arg in "${group_versions[@]}"; do
         inputs+=("--input" "$arg")
     done
+    set -x
     "${gobin}/client-gen" \
         -v "${v}" \
         --go-header-file "${boilerplate}" \
         --clientset-name "${clientset_versioned_name}" \
-        --input-base "${in_pkg_root}" \
+        --input-base "" \
         --output-base "${out_base}" \
         --output-package "${out_pkg_root}/${clientset_subdir}" \
         --apply-configuration-package "${applyconfig_pkg}" \
-        "${inputs[@]}"
-
+        --input "${in_pkg_root}"
+    set +x
     if [ "${watchable}" == "true" ]; then
         echo "Generating lister code for ${#input_pkgs[@]} targets"
 
@@ -647,5 +654,131 @@ function kube::codegen::gen_client() {
             --versioned-clientset-package "${out_pkg_root}/${clientset_subdir}/${clientset_versioned_name}" \
             --listers-package "${out_pkg_root}/${listers_subdir}" \
             "${inputs[@]}"
+    fi
+}
+
+# Generate register
+#
+# Args:
+#   --input-pkg-root <string>
+#     The root package under which to search for files which request code to be
+#     generated.  This must be Go package syntax, e.g.  "k8s.io/foo/bar".
+#
+#   --output-pkg-root <string>
+#     The root package into which generated directories and files will be
+#     placed.  This must be Go package syntax, e.g. "k8s.io/foo/bar".
+#
+#   --output-base <string>
+#     The root directory under which to emit code.  The concatenation of
+#     <output-base> + <input-pkg-root> must be valid.
+#
+#   --boilerplate <string = path_to_kube_codegen_boilerplate>
+#     An optional override for the header file to insert into generated files.
+#
+#   --extra-peer-dir <string>
+#     An optional list (this flag may be specified multiple times) of "extra"
+#     directories to consider during conversion generation.
+#
+function kube::codegen::gen_register() {
+    local in_pkg_root=""
+    local out_pkg_root=""
+    local out_base="" # gengo needs the output dir must be $out_base/$out_pkg_root
+    local boilerplate="${KUBE_CODEGEN_ROOT}/hack/boilerplate.go.txt"
+    local v="${KUBE_VERBOSE:-0}"
+    local extra_peers=()
+
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            "--input-pkg-root")
+                in_pkg_root="$2"
+                shift 2
+                ;;
+            "--output-pkg-root")
+                out_pkg_root="$2"
+                shift 2
+                ;;
+            "--output-base")
+                out_base="$2"
+                shift 2
+                ;;
+            "--boilerplate")
+                boilerplate="$2"
+                shift 2
+                ;;
+            "--extra-peer-dir")
+                extra_peers+=("$2")
+                shift 2
+                ;;
+            *)
+                echo "unknown argument: $1" >&2
+                return 1
+                ;;
+        esac
+    done
+
+    if [ -z "${in_pkg_root}" ]; then
+        echo "--input-pkg-root is required" >&2
+        return 1
+    fi
+    if [ -z "${out_base}" ]; then
+        echo "--output-base is required" >&2
+        return 1
+    fi
+
+    (
+        # To support running this from anywhere, first cd into this directory,
+        # and then install with forced module mode on and fully qualified name.
+        cd "${KUBE_CODEGEN_ROOT}"
+        BINS=(
+            register-gen
+        )
+        # shellcheck disable=2046 # printf word-splitting is intentional
+        GO111MODULE=on go install $(printf "k8s.io/code-generator/cmd/%s " "${BINS[@]}")
+    )
+    # Go installs in $GOBIN if defined, and $GOPATH/bin otherwise
+    gobin="${GOBIN:-$(go env GOPATH)/bin}"
+
+    # These tools all assume out-dir == in-dir.
+    root="${out_base}/${in_pkg_root}"
+    mkdir -p "${root}"
+    root="$(cd "${root}" && pwd -P)"
+
+    # Register
+    #
+    local input_pkgs=()
+    while read -r file; do
+        dir="$(dirname "${file}")"
+        pkg="$(cd "${dir}" && GO111MODULE=on go list -find .)"
+        input_pkgs+=("${pkg}")
+    done < <(
+        ( kube::codegen::internal::git_grep -l \
+            -e '+k8s:register-gen' \
+            ":(glob)${root}"/'**/*.go' \
+            || true \
+        ) | LC_ALL=C sort -u
+    )
+
+    if [ "${#input_pkgs[@]}" != 0 ]; then
+        echo "Generating register code for ${#input_pkgs[@]} targets"
+
+        kube::codegen::internal::git_find -z \
+            ":(glob)${root}"/'**/zz_generated.register.go' \
+            | xargs -0 rm -f
+
+        local input_args=()
+        for arg in "${input_pkgs[@]}"; do
+            input_args+=("--input-dirs" "$arg")
+        done
+        local extra_peer_args=()
+        for arg in "${extra_peers[@]:+"${extra_peers[@]}"}"; do
+            extra_peer_args+=("--extra-peer-dirs" "$arg")
+        done
+        "${gobin}/register-gen" \
+            -v "${v}" \
+            -O zz_generated.register \
+            --go-header-file "${boilerplate}" \
+            --output-base "${out_base}" \
+            "${extra_peer_args[@]:+"${extra_peer_args[@]}"}" \
+            "${input_args[@]}"
     fi
 }
