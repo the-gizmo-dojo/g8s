@@ -1,4 +1,4 @@
-package g8s
+package controller
 
 import (
 	//	"github.com/rancher/wrangler/pkg/crd"
@@ -39,6 +39,7 @@ func NewController(
 	passwordInformer informers.PasswordInformer) *Controller {
 
 	utilruntime.Must(g8sscheme.AddToScheme(scheme.Scheme))
+
 	klog.V(4).Info("Creating event broadcaster")
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(klog.Infof)
@@ -54,6 +55,26 @@ func NewController(
 		recorder:        recorder,
 	}
 
-	return controller
+	klog.Info("Setting up event handlers")
+	passwordInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: controller.enqueuePassword,
+		UpdateFunc: func(old, new any) {
+			controller.enqueuePassword(new)
+		},
+	})
 
+	return controller
+}
+
+// enqueuePassword takes a Password resource and converts it into a namespace/name
+// string which is then put onto the workqueue. This method should *not* be
+// passed resources of any type other than Password.
+func (c *Controller) enqueuePassword(obj any) {
+	var key string
+	var err error
+	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
+		utilruntime.HandleError(err)
+		return
+	}
+	c.workqueue.Add(key)
 }
