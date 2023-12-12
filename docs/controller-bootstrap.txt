@@ -5,9 +5,10 @@ code scaffolding process:
 		// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object - put above types with metav1.TypeMeta
 	2. create doc.go in same dir as types.go
 	3. run hack/update-codegen.sh
+		- all *-pkg-root vars must match the dir structure on your filesystem
 
 controller:
-	informer:
+	client:
 		reflector: read k8s-apiserver, populate event queue
 			client-go/tools/cache/Reflector, ListWatch/ListerWatcher, DeltaFIFO
 		informer: read event queue, update cache and call correct event (delta) handler
@@ -38,7 +39,6 @@ controller:
 
 		handler (handcrafted)
 			- compares actual state (Status field) with desired, attempts to converge the two, then updates the Status field
-			- 
 
 	
 
@@ -61,11 +61,11 @@ controller inner execution workflow (func (c *Controller) Run(...)):
 	1. defer error exit handling calls
 	2. [opinion] install CRDs
 	3. start Informer factories (one for each Informer) to begin populating Informer caches and wait for them to sync
-	4. launch workers
+	4. launch workers (infite loop of processing items on workqueue)
 	
 controller outer execution workflow (func main()):
 	1. instantiate k8s and custom clientsets
-	2. create k8s and custom InformerFactorys
+	2. create k8s and custom InformerFactorys (because they need a client to be instantiated)
 	3. call NewController()
 	4. start InformerFactorys
 	
