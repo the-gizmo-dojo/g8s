@@ -25,6 +25,7 @@ controller:
 		k8s.io/client-go/kubernetes/scheme (maps Go types to GVKs)
 		custom clientset, ~= k8s.io/client-go/kubernetes/typed/core/v1/PodInterface (query k8s-apiserver)
 		k8s.io/client-go/tools/record (creates and reports Events for objects)
+		all generated types (clientsets, informers, listers)
 		
 		
 		
