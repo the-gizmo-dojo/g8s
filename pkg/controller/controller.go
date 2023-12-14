@@ -82,7 +82,7 @@ func NewController(
 	// Set up an event handler for when Password resources change
 	passwordInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.enqueuePassword,
-		UpdateFunc: func(old, new any) {
+		UpdateFunc: func(old, new interface{}) {
 			controller.enqueuePassword(new)
 		},
 	})

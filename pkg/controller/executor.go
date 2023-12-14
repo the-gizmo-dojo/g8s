@@ -5,11 +5,31 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/the-gizmo-dojo/g8s/pkg/apis/api.g8s.io/v1alpha1"
+	"github.com/the-gizmo-dojo/g8s/pkg/g8s"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
+)
+
+const (
+	// SuccessSynced is used as part of the Event 'reason' when a Password is synced
+	SuccessSynced = "Synced"
+	// ErrResourceExists is used as part of the Event 'reason' when a Password fails
+	// to sync due to a Secret of the same name already existing.
+	ErrResourceExists = "ErrResourceExists"
+
+	// MessageResourceExists is the message used for Events when a resource
+	// fails to sync due to a Secret already existing
+	MessageResourceExists = "Resource %q already exists and is not managed by Password"
+	// MessageResourceSynced is the message used for an Event fired when a Foo
+	// is synced successfully
+	MessageResourceSynced = "Password synced successfully"
 )
 
 type Executor struct {
@@ -117,6 +137,81 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 	return true
 }
 
+// syncHandler compares the actual state with the desired, and attempts to
+// converge the two. It then updates the Status block of the Password resource
+// with the current status of the resource.
+func (c *Controller) syncHandler(ctx context.Context, key string) error {
+	// Convert the namespace/name string into a distinct namespace and name
+	logger := klog.LoggerWithValues(klog.FromContext(ctx), "resourceName", key)
+
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+		return nil
+	}
+
+	// Get the Password resource with this namespace/name
+	password, err := c.passwordsLister.Passwords(namespace).Get(name)
+	if err != nil {
+		// The Password resource may no longer exist, in which case we stop
+		// processing.
+		if errors.IsNotFound(err) {
+			utilruntime.HandleError(fmt.Errorf("password '%s' in work queue no longer exists", key))
+			return nil
+		}
+
+		return err
+	}
+
+	secretName := password.ObjectMeta.Name
+	// Get the Secret with the name specified in Password.ObjectMeta.Name
+	secret, err := c.secretsLister.Secrets(password.Namespace).Get(secretName)
+	// If the resource doesn't exist, we'll create it
+	if errors.IsNotFound(err) {
+		logger.V(4).Info("Create secret resource")
+		secret, err = c.Client.kubeClientset.CoreV1().Secrets(password.Namespace).Create(ctx, newSecret(password), metav1.CreateOptions{})
+	}
+
+	// If an error occurs during Get/Create, we'll requeue the item so we can
+	// attempt processing again later. This could have been caused by a
+	// temporary network failure, or any other transient reason.
+	if err != nil {
+		return err
+	}
+
+	// If the Secret is not controlled by this Password resource, we should log
+	// a warning to the event recorder and return error msg.
+	if !metav1.IsControlledBy(secret, password) {
+		msg := fmt.Sprintf(MessageResourceExists, secret.Name)
+		c.recorder.Event(password, corev1.EventTypeWarning, ErrResourceExists, msg)
+		return fmt.Errorf("%s", msg)
+	}
+
+	// Finally, we update the status block of the Foo resource to reflect the
+	// current state of the world
+	err = c.updatePasswordStatus(password, secret)
+	if err != nil {
+		return err
+	}
+
+	c.recorder.Event(password, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
+	return nil
+}
+
+func (c *Controller) updatePasswordStatus(password *v1alpha1.Password, secret *corev1.Secret) error {
+	// NEVER modify objects from the store. It's a read-only, local cache.
+	// You can use DeepCopy() to make a deep copy of original object and modify this copy
+	// Or create a copy manually for better performance
+	passwordCopy := password.DeepCopy()
+	passwordCopy.Status.Ready = true
+	// If the CustomResourceSubresources feature gate is not enabled,
+	// we must use Update instead of UpdateStatus to update the Status block of the Foo resource.
+	// UpdateStatus will not allow changes to the Spec of the resource,
+	// which is ideal for ensuring nothing other than resource status has been updated.
+	_, err := c.Client.g8sClientset.ApiV1alpha1().Passwords(password.Namespace).UpdateStatus(context.TODO(), passwordCopy, metav1.UpdateOptions{})
+	return err
+}
+
 // enqueuePassword takes a Password resource and converts it into a namespace/name
 // string which is then put onto the workqueue. This method should *not* be
 // passed resources of any type other than Password.
@@ -128,4 +223,75 @@ func (c *Controller) enqueuePassword(obj any) {
 		return
 	}
 	c.workqueue.Add(key)
+}
+
+// handleObject will take any resource implementing metav1.Object and attempt
+// to find the Password resource that 'owns' it. It does this by looking at the
+// objects metadata.ownerReferences field for an appropriate OwnerReference.
+// It then enqueues that Password resource to be processed. If the object does not
+// have an appropriate OwnerReference, it will simply be skipped.
+func (c *Controller) handleObject(obj interface{}) {
+	var object metav1.Object
+	var ok bool
+	logger := klog.FromContext(context.Background())
+	if object, ok = obj.(metav1.Object); !ok {
+		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+		if !ok {
+			utilruntime.HandleError(fmt.Errorf("error decoding object, invalid type"))
+			return
+		}
+		object, ok = tombstone.Obj.(metav1.Object)
+		if !ok {
+			utilruntime.HandleError(fmt.Errorf("error decoding object tombstone, invalid type"))
+			return
+		}
+		logger.V(4).Info("Recovered deleted object", "resourceName", object.GetName())
+	}
+	logger.V(4).Info("Processing object", "object", klog.KObj(object))
+	if ownerRef := metav1.GetControllerOf(object); ownerRef != nil {
+		// If this object is not owned by a Foo, we should not do anything more
+		// with it.
+		if ownerRef.Kind != "Foo" {
+			return
+		}
+
+		password, err := c.passwordsLister.Passwords(object.GetNamespace()).Get(ownerRef.Name)
+		if err != nil {
+			logger.V(4).Info("Ignore orphaned object", "object", klog.KObj(object), "foo", ownerRef.Name)
+			return
+		}
+
+		c.enqueuePassword(password)
+		return
+	}
+}
+
+// newSecret creates a new Secret for a Password resource. It also sets
+// the appropriate OwnerReferences on the resource so handleObject can discover
+// the Password resource that 'owns' it.
+func newSecret(pw *v1alpha1.Password) *corev1.Secret {
+	pwStringData := g8s.GeneratePassword(pw)
+
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pw.ObjectMeta.Name,
+			Namespace: pw.ObjectMeta.Namespace,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(pw, v1alpha1.SchemeGroupVersion.WithKind("Password")),
+			},
+			Annotations: map[string]string{
+				"controller": "g8s",
+			},
+		},
+		Immutable: boolPtr(true),
+		StringData: map[string]string{
+			"password": pwStringData,
+		},
+		Type: "Opaque",
+	}
+}
+
+// Secret.Immutable requires a *bool, helper func to return that
+func boolPtr(b bool) *bool {
+	return &b
 }

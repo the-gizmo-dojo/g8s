@@ -34,7 +34,6 @@ type Password struct {
 
 // PasswordSpec defines the desired state of Password
 type PasswordSpec struct {
-	Name         string `json:"id,omitempty"`
 	Length       uint8  `json:"length,omitempty"`
 	CharacterSet string `json:"characterset,omitempty"`
 }
