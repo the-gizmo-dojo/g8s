@@ -205,7 +205,6 @@ func (c *Controller) syncHandler(ctx context.Context, key string) error {
 	// Finally, we update the status block of the Password resource to reflect the
 	// current state of the world
 	err = c.updatePasswordStatus(password, backend)
-	fmt.Println("updateStatusErr: ", err)
 	if err != nil {
 		return err
 	}
