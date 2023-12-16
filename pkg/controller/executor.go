@@ -27,7 +27,7 @@ const (
 	// MessageResourceExists is the message used for Events when a resource
 	// fails to sync due to a Secret already existing
 	MessageResourceExists = "Resource %q already exists and is not managed by Password"
-	// MessageResourceSynced is the message used for an Event fired when a Foo
+	// MessageResourceSynced is the message used for an Event fired when a Password
 	// is synced successfully
 	MessageResourceSynced = "Password synced successfully"
 )
@@ -116,7 +116,7 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 			return nil
 		}
 		// Run the syncHandler, passing it the namespace/name string of the
-		// Foo resource to be synced.
+		// Password resource to be synced.
 		if err := c.syncHandler(ctx, key); err != nil {
 			// Put the item back on the workqueue to handle any transient errors.
 			c.workqueue.AddRateLimited(key)
@@ -163,13 +163,28 @@ func (c *Controller) syncHandler(ctx context.Context, key string) error {
 		return err
 	}
 
-	secretName := password.ObjectMeta.Name
-	// Get the Secret with the name specified in Password.ObjectMeta.Name
-	secret, err := c.secretsLister.Secrets(password.Namespace).Get(secretName)
-	// If the resource doesn't exist, we'll create it
-	if errors.IsNotFound(err) {
-		logger.V(4).Info("Create secret resource")
-		secret, err = c.Client.kubeClientset.CoreV1().Secrets(password.Namespace).Create(ctx, newSecret(password), metav1.CreateOptions{})
+	backendName := password.ObjectMeta.Name
+	historyName := password.ObjectMeta.Name + "-history"
+	// Get the backend Secret and history Secret with the name specified in Password.ObjectMeta.Name
+	backend, berr := c.secretsLister.Secrets(password.Namespace).Get(backendName)
+	history, herr := c.secretsLister.Secrets(password.Namespace).Get(historyName)
+
+	// If the backend and history resources don't exist, create them
+	if errors.IsNotFound(berr) && errors.IsNotFound(herr) {
+		logger.V(4).Info("Create backend and history Secret resources")
+		pwstr := g8s.GeneratePassword(password)
+		backend, err = c.Client.kubeClientset.CoreV1().Secrets(password.Namespace).Create(ctx, newBackend(password, pwstr), metav1.CreateOptions{})
+		history, err = c.Client.kubeClientset.CoreV1().Secrets(password.Namespace).Create(ctx, newHistory(password, pwstr), metav1.CreateOptions{})
+	} else if errors.IsNotFound(berr) { // backend dne but history does, rebuild backend from history
+		logger.V(4).Info("Create backend Secret resources from history")
+		pwbyte := history.Data["password"]
+		backend, err = c.Client.kubeClientset.CoreV1().Secrets(password.Namespace).Create(ctx, newBackend(password, string(pwbyte)), metav1.CreateOptions{})
+	} else if errors.IsNotFound(herr) { // backend exists but history dne, rebuild history from backend
+		logger.V(4).Info("Create history Secret resources from backend")
+		pwbyte := backend.Data["password"]
+		history, err = c.Client.kubeClientset.CoreV1().Secrets(password.Namespace).Create(ctx, newHistory(password, string(pwbyte)), metav1.CreateOptions{})
+	} else {
+		logger.V(4).Info("Secret resources for history and backend exist")
 	}
 
 	// If an error occurs during Get/Create, we'll requeue the item so we can
@@ -181,15 +196,16 @@ func (c *Controller) syncHandler(ctx context.Context, key string) error {
 
 	// If the Secret is not controlled by this Password resource, we should log
 	// a warning to the event recorder and return error msg.
-	if !metav1.IsControlledBy(secret, password) {
-		msg := fmt.Sprintf(MessageResourceExists, secret.Name)
+	if !metav1.IsControlledBy(backend, password) {
+		msg := fmt.Sprintf(MessageResourceExists, backend.Name)
 		c.recorder.Event(password, corev1.EventTypeWarning, ErrResourceExists, msg)
 		return fmt.Errorf("%s", msg)
 	}
 
-	// Finally, we update the status block of the Foo resource to reflect the
+	// Finally, we update the status block of the Password resource to reflect the
 	// current state of the world
-	err = c.updatePasswordStatus(password, secret)
+	err = c.updatePasswordStatus(password, backend)
+	fmt.Println("updateStatusErr: ", err)
 	if err != nil {
 		return err
 	}
@@ -205,10 +221,10 @@ func (c *Controller) updatePasswordStatus(password *v1alpha1.Password, secret *c
 	passwordCopy := password.DeepCopy()
 	passwordCopy.Status.Ready = true
 	// If the CustomResourceSubresources feature gate is not enabled,
-	// we must use Update instead of UpdateStatus to update the Status block of the Foo resource.
+	// we must use Update instead of UpdateStatus to update the Status block of the Password resource.
 	// UpdateStatus will not allow changes to the Spec of the resource,
 	// which is ideal for ensuring nothing other than resource status has been updated.
-	_, err := c.Client.g8sClientset.ApiV1alpha1().Passwords(password.Namespace).UpdateStatus(context.TODO(), passwordCopy, metav1.UpdateOptions{})
+	_, err := c.Client.g8sClientset.ApiV1alpha1().Passwords(password.Namespace).Update(context.TODO(), passwordCopy, metav1.UpdateOptions{})
 	return err
 }
 
@@ -249,15 +265,15 @@ func (c *Controller) handleObject(obj interface{}) {
 	}
 	logger.V(4).Info("Processing object", "object", klog.KObj(object))
 	if ownerRef := metav1.GetControllerOf(object); ownerRef != nil {
-		// If this object is not owned by a Foo, we should not do anything more
+		// If this object is not owned by a Password, we should not do anything more
 		// with it.
-		if ownerRef.Kind != "Foo" {
+		if ownerRef.Kind != "Password" {
 			return
 		}
 
 		password, err := c.passwordsLister.Passwords(object.GetNamespace()).Get(ownerRef.Name)
 		if err != nil {
-			logger.V(4).Info("Ignore orphaned object", "object", klog.KObj(object), "foo", ownerRef.Name)
+			logger.V(4).Info("Ignore orphaned object", "object", klog.KObj(object), "password", ownerRef.Name)
 			return
 		}
 
@@ -266,12 +282,15 @@ func (c *Controller) handleObject(obj interface{}) {
 	}
 }
 
-// newSecret creates a new Secret for a Password resource. It also sets
-// the appropriate OwnerReferences on the resource so handleObject can discover
-// the Password resource that 'owns' it.
-func newSecret(pw *v1alpha1.Password) *corev1.Secret {
-	pwStringData := g8s.GeneratePassword(pw)
+// Secret.Immutable requires a *bool, helper func to return that
+func boolPtr(b bool) *bool {
+	return &b
+}
 
+// newSecret creates a new Secret for a Password resource which contains the actual password.
+// It also sets the appropriate OwnerReferences on the resource so handleObject can discover
+// the Password resource that 'owns' it.
+func newBackend(pw *v1alpha1.Password, pwstr string) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pw.ObjectMeta.Name,
@@ -285,13 +304,32 @@ func newSecret(pw *v1alpha1.Password) *corev1.Secret {
 		},
 		Immutable: boolPtr(true),
 		StringData: map[string]string{
-			"password": pwStringData,
+			"password": pwstr,
 		},
 		Type: "Opaque",
 	}
 }
 
-// Secret.Immutable requires a *bool, helper func to return that
-func boolPtr(b bool) *bool {
-	return &b
+// newHistory creates a new Secret for a Password resource which contains the password's history.
+// It also sets the appropriate OwnerReferences on the resource so handleObject can discover
+// the Password resource that 'owns' it.
+func newHistory(pw *v1alpha1.Password, pwstr string) *corev1.Secret {
+
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pw.ObjectMeta.Name + "-history",
+			Namespace: pw.ObjectMeta.Namespace,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(pw, v1alpha1.SchemeGroupVersion.WithKind("Password")),
+			},
+			Annotations: map[string]string{
+				"controller": "g8s",
+			},
+		},
+		Immutable: boolPtr(true),
+		StringData: map[string]string{
+			"password": pwstr,
+		},
+		Type: "Opaque",
+	}
 }
