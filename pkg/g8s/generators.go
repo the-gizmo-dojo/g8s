@@ -1,33 +1,43 @@
 package g8s
 
 import (
+	"strconv"
+
 	"github.com/crossplane/crossplane-runtime/pkg/password"
 	"github.com/the-gizmo-dojo/g8s/pkg/apis/api.g8s.io/v1alpha1"
 )
 
 type Gate interface {
 	Generate() Answer
-	Rotate()
+	Rotate() map[string]string
 }
 
-type Answer[A any] struct {
-	Content A
+type Answer struct {
+	Content any
 }
 
 type Password struct {
-	v1alpha1.PasswordSpec
+	v1alpha1.Password
+	backend
 }
 
-type PasswordAnswer struct {
-	Answer string
+type backend struct {
+	content string
+	history []string
 }
 
-func (p Password) Generate() Answer {
-	content := map[string]int{"asdf": 1}
-	return make(Answer[string]{content})
+func PasswordWithBackend(pw *v1alpha1.Password) Password {
+	return Password{
+		*pw,
+		backend{
+			content: "",
+			history: []string{},
+		},
+	}
 }
 
-func GeneratePassword(pw *v1alpha1.Password) string {
+// Answer.Content.(string)
+func (pw Password) Generate() Answer {
 	settings := password.Settings{
 		Length:       int(pw.Spec.Length),
 		CharacterSet: pw.Spec.CharacterSet,
@@ -36,5 +46,20 @@ func GeneratePassword(pw *v1alpha1.Password) string {
 	// error can be ignored because if there's a problem it will be handled in the controller (processNextWorkItem will requeue it)
 	pwstr, _ := settings.Generate()
 
-	return pwstr
+	return Answer{
+		Content: pwstr,
+	}
+}
+
+func (pw Password) Rotate() map[string]string {
+	newContent := pw.Generate().Content.(string)
+	newHistory := append([]string{newContent}, pw.history...)
+	ans := make(map[string]string)
+
+	for i, pw := range newHistory {
+		histitem := "password-" + strconv.Itoa(i)
+		ans[histitem] = pw
+	}
+
+	return ans
 }

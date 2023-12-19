@@ -23,6 +23,8 @@ import (
 // +genclient
 // +k8s:register-gen
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:genclient:method=UpdateStatus,verb=updateStatus,subresource=status, \
+// result=k8s.io/apimachinery/pkg/apis/meta/v1.Status
 // Password is the Schema for the passwords API
 type Password struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -70,4 +72,10 @@ const (
 
 type RotationStatus struct {
 	Phase string `json:"phase,omitempty"`
+}
+
+type RotationList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []Rotation `json:"items"`
 }

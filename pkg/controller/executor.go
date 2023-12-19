@@ -172,17 +172,19 @@ func (c *Controller) syncHandler(ctx context.Context, key string) error {
 	// If the backend and history resources don't exist, create them
 	if errors.IsNotFound(berr) && errors.IsNotFound(herr) {
 		logger.V(4).Info("Create backend and history Secret resources")
-		pwstr := g8s.GeneratePassword(password)
-		backend, err = c.Client.kubeClientset.CoreV1().Secrets(password.Namespace).Create(ctx, newBackend(password, pwstr), metav1.CreateOptions{})
-		history, err = c.Client.kubeClientset.CoreV1().Secrets(password.Namespace).Create(ctx, newHistory(password, pwstr), metav1.CreateOptions{})
+		g8sPw := g8s.PasswordWithBackend(password)
+		g8sPwContent := g8sPw.Rotate()
+		backend, err = c.Client.kubeClientset.CoreV1().Secrets(password.Namespace).Create(ctx, newBackendSecret(password, g8sPwContent["password"]), metav1.CreateOptions{})
+		history, err = c.Client.kubeClientset.CoreV1().Secrets(password.Namespace).Create(ctx, newHistorySecret(password, g8sPwContent), metav1.CreateOptions{})
 	} else if errors.IsNotFound(berr) { // backend dne but history does, rebuild backend from history
 		logger.V(4).Info("Create backend Secret resources from history")
-		pwbyte := history.Data["password"]
-		backend, err = c.Client.kubeClientset.CoreV1().Secrets(password.Namespace).Create(ctx, newBackend(password, string(pwbyte)), metav1.CreateOptions{})
+		pwbyte := history.Data["password-0"]
+		backend, err = c.Client.kubeClientset.CoreV1().Secrets(password.Namespace).Create(ctx, newBackendSecret(password, string(pwbyte)), metav1.CreateOptions{})
 	} else if errors.IsNotFound(herr) { // backend exists but history dne, rebuild history from backend
 		logger.V(4).Info("Create history Secret resources from backend")
 		pwbyte := backend.Data["password"]
-		history, err = c.Client.kubeClientset.CoreV1().Secrets(password.Namespace).Create(ctx, newHistory(password, string(pwbyte)), metav1.CreateOptions{})
+		pwmap := map[string]string{"password-0": string(pwbyte)}
+		history, err = c.Client.kubeClientset.CoreV1().Secrets(password.Namespace).Create(ctx, newHistorySecret(password, pwmap), metav1.CreateOptions{})
 	} else {
 		logger.V(4).Info("Secret resources for history and backend exist")
 	}
@@ -223,7 +225,7 @@ func (c *Controller) updatePasswordStatus(password *v1alpha1.Password, secret *c
 	// we must use Update instead of UpdateStatus to update the Status block of the Password resource.
 	// UpdateStatus will not allow changes to the Spec of the resource,
 	// which is ideal for ensuring nothing other than resource status has been updated.
-	_, err := c.Client.g8sClientset.ApiV1alpha1().Passwords(password.Namespace).Update(context.TODO(), passwordCopy, metav1.UpdateOptions{})
+	_, err := c.Client.g8sClientset.ApiV1alpha1().Passwords(password.Namespace).UpdateStatus(context.TODO(), passwordCopy, metav1.UpdateOptions{})
 	return err
 }
 
@@ -289,7 +291,7 @@ func boolPtr(b bool) *bool {
 // newSecret creates a new Secret for a Password resource which contains the actual password.
 // It also sets the appropriate OwnerReferences on the resource so handleObject can discover
 // the Password resource that 'owns' it.
-func newBackend(pw *v1alpha1.Password, pwstr string) *corev1.Secret {
+func newBackendSecret(pw *v1alpha1.Password, pwstr string) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pw.ObjectMeta.Name,
@@ -312,7 +314,7 @@ func newBackend(pw *v1alpha1.Password, pwstr string) *corev1.Secret {
 // newHistory creates a new Secret for a Password resource which contains the password's history.
 // It also sets the appropriate OwnerReferences on the resource so handleObject can discover
 // the Password resource that 'owns' it.
-func newHistory(pw *v1alpha1.Password, pwstr string) *corev1.Secret {
+func newHistorySecret(pw *v1alpha1.Password, pwhist map[string]string) *corev1.Secret {
 
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -325,10 +327,8 @@ func newHistory(pw *v1alpha1.Password, pwstr string) *corev1.Secret {
 				"controller": "g8s",
 			},
 		},
-		Immutable: boolPtr(true),
-		StringData: map[string]string{
-			"password": pwstr,
-		},
-		Type: "Opaque",
+		Immutable:  boolPtr(true),
+		StringData: pwhist,
+		Type:       "Opaque",
 	}
 }
