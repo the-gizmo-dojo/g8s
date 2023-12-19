@@ -50,3 +50,24 @@ type PasswordList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Password `json:"items"`
 }
+
+type Rotation struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   RotationSpec   `json:"spec,omitempty"`
+	Status RotationStatus `json:"status,omitempty"`
+}
+
+type RotationSpec struct {
+	Target string `json:"target"`
+}
+
+const (
+	PhaseRunning  = "RUNNING"
+	PhaseComplete = "COMPLETE"
+)
+
+type RotationStatus struct {
+	Phase string `json:"phase,omitempty"`
+}
