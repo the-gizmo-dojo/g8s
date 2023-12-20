@@ -28,6 +28,7 @@ import (
 type ApiV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	PasswordsGetter
+	RotationsGetter
 }
 
 // ApiV1alpha1Client is used to interact with features provided by the api.g8s.io group.
@@ -37,6 +38,10 @@ type ApiV1alpha1Client struct {
 
 func (c *ApiV1alpha1Client) Passwords(namespace string) PasswordInterface {
 	return newPasswords(c, namespace)
+}
+
+func (c *ApiV1alpha1Client) Rotations(namespace string) RotationInterface {
+	return newRotations(c, namespace)
 }
 
 // NewForConfig creates a new ApiV1alpha1Client for the given config.

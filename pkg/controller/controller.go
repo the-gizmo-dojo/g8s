@@ -7,6 +7,7 @@ import (
 	"golang.org/x/time/rate"
 
 	//	"github.com/rancher/wrangler/pkg/crd"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -17,6 +18,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 
+	jobinformers "k8s.io/client-go/informers/batch/v1"
 	secretinformers "k8s.io/client-go/informers/core/v1"
 
 	//	g8sv1alpha1 "github.com/the-gizmo-dojo/g8s/pkg/apis/api.g8s.io/v1alpha1"
@@ -40,7 +42,9 @@ func NewController(
 	kubeClientset kubernetes.Interface,
 	g8sClientset clientset.Interface,
 	passwordInformer informers.PasswordInformer,
-	secretInformer secretinformers.SecretInformer) *Controller {
+	rotationInformer informers.RotationInformer,
+	secretInformer secretinformers.SecretInformer,
+	jobInformer jobinformers.JobInformer) *Controller {
 
 	logger := klog.FromContext(ctx)
 
@@ -73,7 +77,8 @@ func NewController(
 			recorder:         recorder,
 		},
 		Executor: Executor{
-			workqueue: workqueue.NewNamedRateLimitingQueue(ratelimiter, "Password"),
+			passwordWorkqueue: workqueue.NewNamedRateLimitingQueue(ratelimiter, "Password"),
+			rotationWorkqueue: workqueue.NewNamedRateLimitingQueue(ratelimiter, "Rotation"),
 		},
 	}
 
@@ -94,7 +99,7 @@ func NewController(
 	// handling Secret resources. More info on this pattern:
 	// https://github.com/kubernetes/community/blob/8cafef897a22026d42f5e5bb3f104febe7e29830/contributors/devel/controllers.md
 	secretInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: controller.handleObject,
+		AddFunc: controller.handlePasswordObject,
 		UpdateFunc: func(old, new interface{}) {
 			newDepl := new.(*corev1.Secret)
 			oldDepl := old.(*corev1.Secret)
@@ -104,9 +109,39 @@ func NewController(
 				// This section will skip calling handleObject() if they are the same.
 				return
 			}
-			controller.handleObject(new)
+			controller.handlePasswordObject(new)
 		},
-		DeleteFunc: controller.handleObject,
+		DeleteFunc: controller.handlePasswordObject,
+	})
+
+	// Set up an event handler for when Rotation resources change
+	rotationInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: controller.enqueuePassword,
+		UpdateFunc: func(old, new interface{}) {
+			controller.enqueuePassword(new)
+		},
+	})
+
+	// Set up an event handler for when Job resources change. This
+	// handler will lookup the owner of the given Job, and if it is
+	// owned by a Rotation resource then the handler will enqueue that Rotation resource for
+	// processing. This way, we don't need to implement custom logic for
+	// handling Job resources. More info on this pattern:
+	// https://github.com/kubernetes/community/blob/8cafef897a22026d42f5e5bb3f104febe7e29830/contributors/devel/controllers.md
+	jobInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: controller.handleRotationObject,
+		UpdateFunc: func(old, new interface{}) {
+			newDepl := new.(*batchv1.Job)
+			oldDepl := old.(*batchv1.Job)
+			if newDepl.ResourceVersion == oldDepl.ResourceVersion {
+				// Periodic resync will send update events for all known Secrets.
+				// Two different versions of the same Secret will always have different ResourceVersions.
+				// This section will skip calling handleObject() if they are the same.
+				return
+			}
+			controller.handleRotationObject(new)
+		},
+		DeleteFunc: controller.handleRotationObject,
 	})
 
 	return controller

@@ -24,3 +24,11 @@ type PasswordListerExpansion interface{}
 // PasswordNamespaceListerExpansion allows custom methods to be added to
 // PasswordNamespaceLister.
 type PasswordNamespaceListerExpansion interface{}
+
+// RotationListerExpansion allows custom methods to be added to
+// RotationLister.
+type RotationListerExpansion interface{}
+
+// RotationNamespaceListerExpansion allows custom methods to be added to
+// RotationNamespaceLister.
+type RotationNamespaceListerExpansion interface{}

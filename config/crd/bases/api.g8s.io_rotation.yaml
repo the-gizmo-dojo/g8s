@@ -4,21 +4,21 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.13.0
-  name: passwords.api.g8s.io
+  name: rotations.api.g8s.io
 spec:
   group: api.g8s.io
   names:
-    kind: Password
-    listKind: PasswordList
-    plural: passwords
-    singular: password
+    kind: Rotation
+    listKind: RotationList
+    plural: rotations
+    singular: rotation
     shortNames: ["pw"]
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Password is the Schema for the passwords API
+        description: Rotation is the Schema for the rotations API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -33,15 +33,13 @@ spec:
           metadata:
             type: object
           spec:
-            description: PasswordSpec defines the desired state of Password
+            description: RotationSpec defines the desired state of Rotation
             properties:
-              characterset:
+              target:
                 type: string
-              length:
-                type: integer
             type: object
           status:
-            description: PasswordStatus defines the observed state of Password
+            description: RotationStatus defines the observed state of Rotation
             properties:
               ready:
                 type: boolean

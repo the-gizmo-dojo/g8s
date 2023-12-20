@@ -59,7 +59,9 @@ func main() {
 
 	controller := controller.NewController(ctx, kubeClient, g8sClient,
 		g8sInformerFactory.Api().V1alpha1().Passwords(),
+		g8sInformerFactory.Api().V1alpha1().Rotations(),
 		kubeInformerFactory.Core().V1().Secrets(),
+		kubeInformerFactory.Batch().V1().Jobs(),
 	)
 
 	// notice that there is no need to run Start methods in a separate goroutine. (i.e. go kubeInformerFactory.Start(ctx.done())

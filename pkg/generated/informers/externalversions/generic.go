@@ -54,6 +54,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	// Group=api.g8s.io, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("passwords"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Api().V1alpha1().Passwords().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("rotations"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Api().V1alpha1().Rotations().Informer()}, nil
 
 	}
 

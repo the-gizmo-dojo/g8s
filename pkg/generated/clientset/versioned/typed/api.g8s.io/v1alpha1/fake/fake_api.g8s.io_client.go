@@ -31,6 +31,10 @@ func (c *FakeApiV1alpha1) Passwords(namespace string) v1alpha1.PasswordInterface
 	return &FakePasswords{c, namespace}
 }
 
+func (c *FakeApiV1alpha1) Rotations(namespace string) v1alpha1.RotationInterface {
+	return &FakeRotations{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeApiV1alpha1) RESTClient() rest.Interface {

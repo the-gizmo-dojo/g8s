@@ -53,6 +53,12 @@ type PasswordList struct {
 	Items           []Password `json:"items"`
 }
 
+// +genclient
+// +k8s:register-gen
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:genclient:method=UpdateStatus,verb=updateStatus,subresource=status, \
+// result=k8s.io/apimachinery/pkg/apis/meta/v1.Status
+// Rotation is the Schema for the rotation API
 type Rotation struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -61,6 +67,7 @@ type Rotation struct {
 	Status RotationStatus `json:"status,omitempty"`
 }
 
+// RotationSpec defines the desired state of Password
 type RotationSpec struct {
 	Target string `json:"target"`
 }
@@ -70,10 +77,13 @@ const (
 	PhaseComplete = "COMPLETE"
 )
 
+// RotationStatus defines the observed state of Password
 type RotationStatus struct {
 	Phase string `json:"phase,omitempty"`
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// RotationList contains a list of Rotation
 type RotationList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

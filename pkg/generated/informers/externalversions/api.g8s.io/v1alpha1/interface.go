@@ -25,6 +25,8 @@ import (
 type Interface interface {
 	// Passwords returns a PasswordInformer.
 	Passwords() PasswordInformer
+	// Rotations returns a RotationInformer.
+	Rotations() RotationInformer
 }
 
 type version struct {
@@ -41,4 +43,9 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // Passwords returns a PasswordInformer.
 func (v *version) Passwords() PasswordInformer {
 	return &passwordInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// Rotations returns a RotationInformer.
+func (v *version) Rotations() RotationInformer {
+	return &rotationInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
